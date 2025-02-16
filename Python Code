@@ -1,0 +1,57 @@
+import spacy
+from spacy.lang.en.stop_words import STOP_WORDS
+from string import punctuation
+from heapq import nlargest
+
+# Load the spaCy English model
+nlp = spacy.load("en_core_web_sm")
+
+# Input text
+text = "John was excited to attend the meeting, but he felt a bit nervous about the meeting because it was his first presentation. He had prepared for weeks, practicing in front of the mirror and reviewing his notes. However, when he entered the room, he realized he had forgotten his notes, which made him even more anxious. Despite the initial panic, he managed to present confidently, impressing his colleagues with his presentation skills."
+
+# Process the text
+doc = nlp(text)
+
+# Tokenize the text and remove stop words and punctuation
+tokens = [token.text for token in doc]
+punctuation = punctuation + '\n'
+
+word_freq = {}
+stop_words = list(STOP_WORDS)
+
+# Calculate word frequencies
+for word in doc:
+    if word.text.lower() not in stop_words:
+        if word.text.lower() not in punctuation:
+            if word.text not in word_freq.keys():
+                word_freq[word.text] = 1
+            else:
+                word_freq[word.text] += 1
+
+# Normalize the word frequencies
+max_freq = max(word_freq.values())
+for word in word_freq.keys():
+    word_freq[word] = word_freq[word] / max_freq
+
+# Tokenize the sentences
+sent_tokens = [sent for sent in doc.sents]
+
+# Score the sentences based on word frequency
+sent_score = {}
+for sent in sent_tokens:
+    for word in sent:
+        if word.text.lower() in word_freq.keys():
+            if sent not in sent_score.keys():
+                sent_score[sent] = word_freq[word.text.lower()]
+            else:
+                sent_score[sent] += word_freq[word.text.lower()]
+
+# Select the top 30% of the sentences based on their scores
+summary = nlargest(int(len(sent_score) * 0.3), sent_score, key=sent_score.get)
+
+# Join the selected sentences to form the final summary
+final_summary = [word.text for word in summary]
+summary_text = " ".join(final_summary)
+
+# Print the final summary
+print(summary_text)
